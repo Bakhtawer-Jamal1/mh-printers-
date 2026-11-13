@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ArrowUpRight, MessageCircle, Mail, MapPin, Moon, Phone, Sun } from 'lucide-react'
 import { BUSINESS, whatsappUrl } from '../data/brand.js'
@@ -19,6 +19,8 @@ const links = [
 export default function SiteLayout() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [headerHeight, setHeaderHeight] = useState(0)
+  const headerRef = useRef(null)
   const [progress, setProgress] = useState(0)
   const [darkMode, setDarkMode] = useState(() => readBrowserSetting('mh-theme') === 'dark')
   const { pathname } = useLocation()
@@ -38,13 +40,21 @@ export default function SiteLayout() {
   /* sticky header + scroll progress */
   useEffect(() => {
     const onScroll = () => {
-      setScrolled(window.scrollY > 12)
+      const isScrolled = window.scrollY > 12
+      setScrolled(isScrolled)
+      if (isScrolled && headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight)
+      }
       const h = document.documentElement.scrollHeight - window.innerHeight
       setProgress(h > 0 ? Math.min(100, (window.scrollY / h) * 100) : 0)
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
   }, [])
 
   /* lock body scroll while drawer open */
@@ -92,8 +102,10 @@ export default function SiteLayout() {
       </Reveal>
 
       {/* ============ HEADER ============ */}
+      {scrolled && <div aria-hidden="true" style={{ height: headerHeight }} />}
       <header
-        className={`sticky top-0 z-40 border-b transition-all duration-500 ${
+        ref={headerRef}
+        className={`site-header ${scrolled ? 'is-scrolled fixed inset-x-0 top-0 z-50' : 'sticky top-0 z-40'} border-b transition-[border-color,box-shadow] duration-500 ${
           scrolled
             ? 'border-line bg-paper/90 shadow-sm'
             : 'border-transparent bg-paper/70'
@@ -153,7 +165,7 @@ export default function SiteLayout() {
                   <>
                     {/* hover pill background */}
                     <span
-                      className={`absolute inset-0 rounded-full bg-line/50 transition-all duration-300 ${
+                      className={`absolute inset-0 rounded-full bg-[#fff3c4] transition-all duration-300 ${
                         isActive
                           ? 'scale-100 opacity-100'
                           : 'scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100'
